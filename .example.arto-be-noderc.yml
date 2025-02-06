@@ -1,0 +1,8 @@
+env: development
+refreshSnapshotInterval: 5
+transactionTimeout: 15000 #ms
+bulletPaths:
+- "/refreshSnapshotInterval"
+- "/minio"
+- "/apis"
+- "/authOpts"
