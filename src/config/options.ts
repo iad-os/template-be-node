@@ -106,7 +106,7 @@ process.env.CONFIG_FILE &&
       },
       ...(process.env.CONFIG_FILE
         ? [process.env.CONFIG_FILE]
-        : [process.cwd(), '.mother-walletrc.yml'])
+        : [process.cwd(), '.example.template-be-noderc.yml'])
     )
   );
 
