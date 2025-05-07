@@ -3,7 +3,7 @@ import app from './config/apiServer.js';
 import { GhiiOptions } from './config/options.js';
 import irene from './config/Irene.js';
 import { nanoid } from 'nanoid';
-import { log } from './config/log.js';
+import { optionsLog } from './config/log.js';
 
 const HTTP_PORT = process.env.PORT ?? 3000;
 const HTTP_HOST = process.env.HOST_BINDING
@@ -12,7 +12,7 @@ const HTTP_HOST = process.env.HOST_BINDING
 async function start(opts: GhiiOptions) {
   const { authOpts, ...otherOpts } = opts;
   const server = await fastify({
-    logger: log({ tags: ['server', 'routes'] }),
+    logger: optionsLog({ tags: ['server', 'routes'] }),
     genReqId: () => nanoid(),
     requestIdHeader: 'x-request-id',
   });
@@ -29,6 +29,7 @@ async function start(opts: GhiiOptions) {
         audience: authOpts.audience,
       },
     },
+    fetchInjection: opts.fetchInjectionOpts,
     authorization: opts.authOpts,
     main: otherOpts,
   });

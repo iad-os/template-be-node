@@ -5,7 +5,7 @@ import fp from 'fastify-plugin';
 import { LRUCache } from 'lru-cache';
 import qs from 'qs';
 import { IntrospectLikeToken, IntrospectTokenError } from './authorization.js';
-import { CacheConfig } from '../../config/options.js';
+import { CacheConfig } from '../config/options.js';
 
 export const TokenIntrospectorConfig = Type.Object({
   issuer: Type.Object({

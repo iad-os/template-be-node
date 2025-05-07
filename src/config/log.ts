@@ -1,6 +1,12 @@
 import redactOptions, { DestinationStream, LoggerOptions, pino } from 'pino';
 export type LEVELS = 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace';
 
+type LogOptions = {
+  tags?: string[];
+  xRequest?: string;
+  idRef?: string;
+};
+
 const options = (): LoggerOptions | DestinationStream => ({
   level: process.env.LOG_LEVEL || 'info',
   ...(process.env.PRETTY_PRINT === 'true' && {
@@ -13,25 +19,27 @@ const options = (): LoggerOptions | DestinationStream => ({
   }),
 });
 
+const optionsLog = (opts: LogOptions): LoggerOptions => {
+  const optsLog = options();
+  return {
+    ...optsLog,
+    base: {
+      tags: opts.tags,
+      'x-request': opts.xRequest,
+      'id-ref': opts.idRef,
+    },
+  };
+};
+
 function log({
   tags = [],
   xRequest,
   idRef,
-}: {
-  tags?: string[];
-  xRequest?: string;
-  idRef?: string;
-}): redactOptions.BaseLogger {
-  const opts = options();
+}: LogOptions): redactOptions.BaseLogger {
   return pino({
-    ...opts,
-    base: {
-      tags,
-      'x-request': xRequest,
-      'id-ref': idRef,
-    },
+    ...optionsLog({ tags, xRequest, idRef }),
   });
 }
 
-export { log };
+export { log, optionsLog };
 export default log;

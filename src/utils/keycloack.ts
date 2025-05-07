@@ -1,7 +1,7 @@
 import { Credentials } from '@keycloak/keycloak-admin-client/lib/utils/auth.js';
 import KcAdminClient from '@keycloak/keycloak-admin-client';
 import waitOn from 'wait-on';
-import log from '../../config/log.js';
+import log from '../config/log.js';
 
 type CredentialsVerifier = {
   ssoHost: string;

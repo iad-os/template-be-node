@@ -1,8 +1,16 @@
 env: development
 refreshSnapshotInterval: 5
-transactionTimeout: 15000 #ms
+authOpts:
+  introspectionEndpoint: https://example.com/auth/realms/xxxx/protocol/openid-connect/token/introspect
+  issuer: https://example.com/auth/realms/xxxx
+  ssoHost: https://example.com/auth
+  authorizePath: "/realms/xxxx/protocol/openid-connect/auth"
+  tokenPath: "/realms/xxxx/protocol/openid-connect/token"
+  client:
+    clientId: xxxx
+    clientSecret: xxxx
+  realmName: xxxx
 bulletPaths:
+- "/bulletPaths"
 - "/refreshSnapshotInterval"
-- "/minio"
-- "/apis"
 - "/authOpts"

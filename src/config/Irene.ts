@@ -5,47 +5,15 @@ import apiService from '../main-http.js';
 import {
   checkConnectivity,
   kcCredentialsVerifier,
-} from '../shared/utils/keycloack.js';
+} from '../utils/keycloack.js';
 import { ghenghi } from './ghenghi.js';
 import options, { AuthConfig } from './options.js';
-import * as mongoService from '../main-db.js';
 import * as mongo from './mongodb.js';
 import { NetworkError } from '@keycloak/keycloak-admin-client';
 
 const irene = new IreneKills({ logger: log({ tags: ['irene'] }) });
 let nsick = 0;
 const opts = options.snapshot();
-
-irene.resource('mongo', {
-  need: async () => {
-    log({ tags: ['init-mongo'] }).info('⏳ initialize mongo connection');
-    await mongoService.start();
-  },
-  check: async () => {
-    const logger = log({ tags: ['mongo', 'check'] });
-    try {
-      await mongoService.checkDb(logger);
-      logger.info('✅ OK check mongo connection');
-      return true;
-    } catch (err) {
-      logger.error({ error: err }, '💥 KO check mongo connection');
-      return false;
-    }
-  },
-  on: {
-    healthcheck: async () => {
-      const logger = log({ tags: ['mongo', 'healthcheck'] });
-      try {
-        // await mongoService.checkDb(logger);
-        logger.debug('✅ OK check mongo connection');
-        return { healthy: true, kill: false };
-      } catch (error) {
-        logger.error({ error }, '💥 KO check mongo connection');
-        return { healthy: false, kill: true };
-      }
-    },
-  },
-});
 
 irene.resource<{ waitOnTimeout: number; authOpts: AuthConfig }>('auth', {
   value: pick(opts, ['authOpts', 'waitOnTimeout']),

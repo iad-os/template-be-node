@@ -10,7 +10,9 @@
 				"esbenp.prettier-vscode",
 				"ms-azuretools.vscode-docker",
 				"humao.rest-client",
-				"eamodio.gitlens"
+				"eamodio.gitlens",
+				"mhutchie.git-graph",
+				"johnpapa.vscode-peacock"
 			]
 		}
 	},

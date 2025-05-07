@@ -7,7 +7,8 @@ import {
   FastifyRequest,
 } from 'fastify';
 import fp from 'fastify-plugin';
-import { AuthConfig } from '../../config/options.js';
+import { AuthConfig } from '../config/options.js';
+import { Header } from '../types/fastify.js';
 import { verifyToken } from '../utils/token.js';
 
 export const IntrospectLikeToken = Type.Object({
@@ -156,7 +157,10 @@ export function createAuthorize({
   introspect: FastifyInstance['introspect'];
   httpErrors: FastifyInstance['httpErrors'];
 }) {
-  return async function authorize(req: FastifyRequest, reply: FastifyReply) {
+  return async function authorize(
+    req: FastifyRequest<{ Headers: Header }>,
+    reply: FastifyReply
+  ) {
     const authz = req.headers.authorization;
 
     if (!authz) {

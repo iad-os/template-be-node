@@ -1,10 +1,10 @@
+import { ghii } from '@ghii/ghii-es';
 import { httpLoader } from '@ghii/http-loader';
 import { packageJsonLoader } from '@ghii/package-json-loader';
 import { yamlLoader } from '@ghii/yaml-loader';
 import { Static, Type } from '@sinclair/typebox';
+import { Value } from '@sinclair/typebox/value';
 import log from './log.js';
-import { ghii } from '@ghii/ghii-es';
-import { ConnectOptions } from 'mongoose';
 
 export const CacheConfig = Type.Object(
   {
@@ -55,7 +55,7 @@ export const GhiiOptions = Type.Object(
         description: Type.String(),
         dbName: Type.Optional(Type.String()),
       },
-      { additionalProperties: true, default: {} }
+      { additionalProperties: true }
     ),
     flags: Type.Object(
       {
@@ -67,13 +67,16 @@ export const GhiiOptions = Type.Object(
       default: 'development',
     }),
     authOpts: AuthConfig,
-    mongo: Type.Object({
-      uris: Type.String({ format: 'uri', default: '' }),
-      timeoutMs: Type.Integer({ default: 60000 }),
-      options: Type.Optional(Type.Unsafe<ConnectOptions>(Type.Unknown())),
-    }),
     waitOnTimeout: Type.Number({ default: 30 * 1000 }),
     refreshSnapshotInterval: Type.Number(),
+    fetchInjectionOpts: Type.Object(
+      {
+        headerKeys: Type.Array(Type.String(), {
+          default: ['authorization'],
+        }),
+      },
+      { default: {} }
+    ),
     bulletPaths: Type.Optional(Type.Array(Type.String())),
   },
   { additionalProperties: false }
@@ -81,7 +84,12 @@ export const GhiiOptions = Type.Object(
 
 export type GhiiOptions = Static<typeof GhiiOptions>;
 
-const options = ghii(T => T.Unsafe<GhiiOptions>()).loader(
+const options = ghii(GhiiOptions).loader(async () => {
+  const defaultConfig = Value.Default(GhiiOptions, {});
+  return defaultConfig as Record<string, unknown>;
+});
+
+options.loader(
   packageJsonLoader({
     target: 'app',
     map: p => ({
@@ -106,7 +114,7 @@ process.env.CONFIG_FILE &&
       },
       ...(process.env.CONFIG_FILE
         ? [process.env.CONFIG_FILE]
-        : [process.cwd(), '.example.template-be-noderc.yml'])
+        : [process.cwd(), '.template-be-noderc.yml'])
     )
   );
 
@@ -120,4 +128,5 @@ process.env.WELL_KNOWN_URL &&
         }).info(err, msg),
     })
   );
+
 export default options;

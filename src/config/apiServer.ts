@@ -3,15 +3,15 @@ import Cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import Sensible from '@fastify/sensible';
 import fastifySwagger from '@fastify/swagger';
-import fastifySwaggerUI from '@fastify/swagger-ui';
+import apiReference from '@scalar/fastify-api-reference';
 import { FastifyPluginAsync } from 'fastify';
-import { kebabCase } from 'lodash-es';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import authorization from '../shared/plugins/authorization.js';
-import introspect from '../shared/plugins/introspect.js';
-import requestId from '../shared/plugins/requestId.js';
-import type { MPlugins } from '../shared/types/fastify.js';
+import authorization from '../plugins/authorization.js';
+import introspect from '../plugins/introspect.js';
+import requestId from '../plugins/requestId.js';
+import type { MPlugins } from '../types/fastify.js';
+import fetchInjection from '../plugins/fetchInjection.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const routesPath = path.resolve(__dirname, '..', 'routes');
@@ -28,7 +28,15 @@ const app: FastifyPluginAsync<MPlugins> = async (
   await fastify.register(Cors, {
     origin: false,
   });
-  await fastify.register(helmet, { global: true });
+  await fastify.register(helmet, {
+    global: true,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+      },
+    },
+  });
   await fastify.register(requestId, { requestIDName: 'x-request-id' });
   await fastify.register(fastifySwagger, {
     mode: 'dynamic',
@@ -39,17 +47,23 @@ const app: FastifyPluginAsync<MPlugins> = async (
         version: opts.main.app.version,
       },
       basePath: `/`,
-      swagger: '2.0',
+      host: '0.0.0.0',
+    },
+    openapi: {
+      info: {
+        title: opts.main.app.name,
+        description: opts.main.app.description,
+        version: opts.main.app.version,
+      },
     },
   });
 
-  await fastify.register(fastifySwaggerUI, {
-    routePrefix: `/${kebabCase(`${opts.main.app.name}-docs`)}`,
-    uiConfig: {
-      docExpansion: 'full',
-      deepLinking: false,
+  // Render an API reference for a given OpenAPI/Swagger spec URL
+  await fastify.register(apiReference, {
+    routePrefix: `/${opts.main.app.name}-docs`,
+    configuration: {
+      content: () => fastify.swagger(),
     },
-    staticCSP: true,
   });
 
   // Normally you would need to load by hand each plugin. `fastify-autoload` is an utility
@@ -57,6 +71,7 @@ const app: FastifyPluginAsync<MPlugins> = async (
   // folder, even the subfolders. Take at look at its documentation, as it's doing a lot more!
   await void fastify.register(introspect, opts.introspector);
   await void fastify.register(authorization, opts.authorization);
+  await void fastify.register(fetchInjection, opts.fetchInjection);
 
   // Then, we'll load all of our routes.
   await fastify.register(AutoLoad, {
