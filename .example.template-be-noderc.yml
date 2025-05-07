@@ -1,15 +1,12 @@
 env: development
 refreshSnapshotInterval: 5
 authOpts:
-  introspectionEndpoint: https://example.com/auth/realms/xxxx/protocol/openid-connect/token/introspect
-  issuer: https://example.com/auth/realms/xxxx
-  ssoHost: https://example.com/auth
-  authorizePath: "/realms/xxxx/protocol/openid-connect/auth"
-  tokenPath: "/realms/xxxx/protocol/openid-connect/token"
-  client:
-    clientId: xxxx
-    clientSecret: xxxx
-  realmName: xxxx
+  issuers:
+    'https://login.xxxx.com/auth/realms/xxxx':
+      wellKnown: https://login.xxxx.com/auth/realms/xxxx/.well-known/openid-configuration
+      client:
+        clientId: xxx-api
+        clientSecret: XXXX
 bulletPaths:
 - "/bulletPaths"
 - "/refreshSnapshotInterval"

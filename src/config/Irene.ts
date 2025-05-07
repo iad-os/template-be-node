@@ -1,15 +1,11 @@
 import { IreneKills } from '@iad-os/irene-kills-es';
-import { pick } from 'lodash-es';
+import { map, pick } from 'lodash-es';
 import log from '../config/log.js';
 import apiService from '../main-http.js';
-import {
-  checkConnectivity,
-  kcCredentialsVerifier,
-} from '../utils/keycloack.js';
+
 import { ghenghi } from './ghenghi.js';
 import options, { AuthConfig } from './options.js';
-import * as mongo from './mongodb.js';
-import { NetworkError } from '@keycloak/keycloak-admin-client';
+import { checkConnectivity, credentialsVerifier } from '../utils/idp.js';
 
 const irene = new IreneKills({ logger: log({ tags: ['irene'] }) });
 let nsick = 0;
@@ -18,50 +14,45 @@ const opts = options.snapshot();
 irene.resource<{ waitOnTimeout: number; authOpts: AuthConfig }>('auth', {
   value: pick(opts, ['authOpts', 'waitOnTimeout']),
   check: async ({ value }) => {
-    try {
-      await checkConnectivity(value.authOpts.issuer, value.waitOnTimeout);
-      await kcCredentialsVerifier({
-        ssoHost: value.authOpts.ssoHost,
-        clientId: value.authOpts.client.clientId,
-        clientSecret: value.authOpts.client.clientSecret,
-        realmName: value.authOpts.realmName,
-      });
-      log({ tags: ['auth', 'keycloak'] }).info(
-        '✅ KC-CHECK-SA-CREDENTIALS - OK'
-      );
-      return true;
-    } catch (error) {
-      if (error instanceof NetworkError) {
-        log({ tags: ['auth', 'keycloak'] }).error(
-          { reason: error.responseData },
-          '💣 KC-CHECK CREDENTIALS - KO'
+    const checks = map(value.authOpts.issuers, async (auth, issuer) => {
+      try {
+        await checkConnectivity(issuer, value.waitOnTimeout);
+        await credentialsVerifier(auth);
+        log({ tags: ['auth', issuer] }).info('✅ CHECK-SA-CREDENTIALS - OK');
+      } catch (error) {
+        log({ tags: ['auth', issuer] }).error(
+          { reason: (error as Error)?.message },
+          '💣 CHECK CONNETTIVITY - KO'
         );
-        return false;
+        throw error;
       }
-      log({ tags: ['auth', 'keycloak'] }).error(
-        { reason: (error as Error)?.message },
-        '💣 KC-CHECK CONNETTIVITY - KO'
-      );
-      return false;
-    }
+    });
+
+    const result = await Promise.allSettled(checks);
+    return result.reduce(
+      (acc, prev) => acc && prev.status === 'fulfilled',
+      true
+    );
   },
   on: {
     healthcheck: async ({ value }) => {
-      try {
-        await checkConnectivity(value.authOpts.issuer, value.waitOnTimeout);
-        return {
-          healthy: true,
-          kill: false,
-        };
-      } catch (err) {
-        log({ tags: ['auth', 'keycloak'] }).error(
-          '💣 KC-CHECK-CONNECTIVITY - KO'
-        );
-        return {
-          healthy: false,
-          kill: true,
-        };
-      }
+      const checks = map(value.authOpts.issuers, async (_, issuer) => {
+        try {
+          await checkConnectivity(issuer, value.waitOnTimeout);
+        } catch (err) {
+          log({ tags: ['auth', issuer] }).error('💣 CHECK-CONNECTIVITY - KO');
+          throw err;
+        }
+      });
+      const result = await Promise.allSettled(checks);
+      const healthy = result.reduce(
+        (acc, prev) => acc && prev.status === 'fulfilled',
+        true
+      );
+      return {
+        healthy: healthy,
+        kill: !healthy,
+      };
     },
   },
 });
@@ -81,19 +72,12 @@ irene.resource('http', {
 
 irene.resource('appCondition', {
   need: async () => {
-    mongo.listener('disconnected', () => {
-      irene.healthcheck();
-    });
-    mongo.listener('reconnected', () => {
-      irene.healthcheck();
-    });
-
     //ghenghi handle configa
-    ghenghi.on('ghenghi:shot', (ev: any) => {
+    ghenghi.on('ghenghi:shot', ev => {
       log({ tags: ['ghenghi', 'kill_ghii'] }).info(ev);
       irene.kill();
     });
-    ghenghi.on('ghenghi:recoil', (ev: any) => {
+    ghenghi.on('ghenghi:recoil', ev => {
       log({ tags: ['ghenghi', 'ghii_error'] }).error(ev);
     });
   },

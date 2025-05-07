@@ -22,12 +22,7 @@ async function start(opts: GhiiOptions) {
       cache: authOpts.enableCache
         ? (authOpts.cacheOpts ?? { introspectTTL: 1, size: 1000 })
         : false,
-      issuer: {
-        clientId: authOpts.client.clientId,
-        clientSecret: authOpts.client.clientSecret,
-        introspectionEndpoint: authOpts.introspectionEndpoint,
-        audience: authOpts.audience,
-      },
+      issuers: authOpts.issuers,
     },
     fetchInjection: opts.fetchInjectionOpts,
     authorization: opts.authOpts,

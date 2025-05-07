@@ -4,28 +4,16 @@ import { FastifyBaseLogger } from 'fastify';
 import fp from 'fastify-plugin';
 import { LRUCache } from 'lru-cache';
 import qs from 'qs';
+import { AuthConfig, CacheConfig } from '../config/options.js';
+import { getWellknown, getWellknownKeyValue } from '../utils/idp.js';
 import { IntrospectLikeToken, IntrospectTokenError } from './authorization.js';
-import { CacheConfig } from '../config/options.js';
 
-export const TokenIntrospectorConfig = Type.Object({
-  issuer: Type.Object({
-    clientId: Type.String({
-      minLength: 1,
-      examples: 'introspect-client-id',
-      description: 'Client Id used to call introspect endpoint',
-    }),
-    clientSecret: Type.String({
-      minLength: 1,
-      examples: 'a-random-secret',
-      description: 'Client Secret used to introspection',
-    }),
-    introspectionEndpoint: Type.String({ minLength: 1 }),
-    audience: Type.Union([Type.String(), Type.Literal(false)], {
-      default: false,
-    }),
+export const TokenIntrospectorConfig = Type.Composite([
+  Type.Pick(AuthConfig, ['issuers']),
+  Type.Object({
+    cache: Type.Union([Type.Literal(false), CacheConfig]),
   }),
-  cache: Type.Union([Type.Literal(false), CacheConfig]),
-});
+]);
 
 export type TokenIntrospectorConfig = Static<typeof TokenIntrospectorConfig>;
 
@@ -68,7 +56,7 @@ export function createTokenIntrospector({
 
   return async function introspect(
     token: string | undefined,
-    tokenPayload?: IntrospectLikeToken,
+    tokenPayload: IntrospectLikeToken,
     headers: HeadersInit = {}
   ): Promise<IntrospectLikeToken | IntrospectTokenError> {
     if (!token || token.length == 0 || typeof token !== 'string')
@@ -77,21 +65,43 @@ export function createTokenIntrospector({
     const cachedIntrospection = introspectionCache.find(token);
     if (cachedIntrospection) return cachedIntrospection;
 
+    const { iss } = tokenPayload;
+
+    const issuerConfig = config.issuers[iss];
+
+    if (!issuerConfig) {
+      return {
+        active: false,
+        error: {
+          code: 401,
+          msg: 'Invalid Client Credential not found',
+        },
+      };
+    }
+
+    const wellknown = await getWellknown(issuerConfig.wellKnown);
+
     let introspectHeaders: HeadersInit = {
       ...headers,
       'Content-Type': 'application/x-www-form-urlencoded',
       authorization: toBasic(
-        config.issuer.clientId,
-        config.issuer.clientSecret
+        issuerConfig.client.clientId,
+        issuerConfig.client.clientSecret
       ),
     };
 
     try {
-      const res = await fetch(config.issuer.introspectionEndpoint, {
-        method: 'POST',
-        headers: introspectHeaders,
-        body: qs.stringify({ token }),
-      });
+      const res = await fetch(
+        getWellknownKeyValue(
+          wellknown,
+          issuerConfig.wellKnownProps.introspection_endpoint
+        ),
+        {
+          method: 'POST',
+          headers: introspectHeaders,
+          body: qs.stringify({ token }),
+        }
+      );
       if (res.ok) {
         const payload = await res.json();
         logger.debug(
@@ -119,7 +129,7 @@ export function createTokenIntrospector({
 
         if (
           audienceVerifier({
-            audience_check: config.issuer.audience,
+            audience_check: issuerConfig.audience,
             audience: payload.aud,
           }) === false
         ) {

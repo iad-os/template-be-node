@@ -22,30 +22,48 @@ export const CacheConfig = Type.Object(
   },
   { description: 'Information required to verify token issued by a issuer' }
 );
-export const AuthConfig = Type.Object(
+export const IssuerConfig = Type.Object(
   {
-    issuer: Type.String(),
-    introspectionEndpoint: Type.String({
+    wellKnown: Type.String({
       // format: 'uri',
+      default: 'http://localhost:8080/realms/mother',
     }),
-    realmName: Type.String(),
-    ssoHost: Type.String(),
-    authorizePath: Type.String(),
-    tokenPath: Type.String(),
+    wellKnownProps: Type.Object(
+      {
+        issuer: Type.String({ default: 'issuer' }),
+        authorization_endpoint: Type.String({
+          default: 'authorization_endpoint',
+        }),
+        token_endpoint: Type.String({ default: 'token_endpoint' }),
+        introspection_endpoint: Type.String({
+          default: 'introspection_endpoint',
+        }),
+        userinfo_endpoint: Type.String({ default: 'userinfo_endpoint' }),
+        end_session_endpoint: Type.String({ default: 'end_session_endpoint' }),
+      },
+      { default: {}, additionalProperties: false }
+    ),
+    audience: Type.Union([Type.String(), Type.Literal(false)], {
+      default: false,
+    }),
     client: Type.Object({
       clientId: Type.String(),
       clientSecret: Type.String(),
     }),
-    enableCache: Type.Boolean({ default: true }),
-    cacheOpts: Type.Optional(CacheConfig),
-    audience: Type.Union([Type.String(), Type.Literal(false)], {
-      default: false,
-    }),
   },
   { additionalProperties: false }
 );
-export type AuthConfig = Static<typeof AuthConfig>;
+export type IssuerConfig = Static<typeof IssuerConfig>;
+export const AuthConfig = Type.Object(
+  {
+    issuers: Type.Record(Type.String(), IssuerConfig),
+    enableCache: Type.Boolean({ default: true }),
+    cacheOpts: Type.Optional(CacheConfig),
+  },
+  { additionalProperties: false }
+);
 
+export type AuthConfig = Static<typeof AuthConfig>;
 export const GhiiOptions = Type.Object(
   {
     app: Type.Object(
