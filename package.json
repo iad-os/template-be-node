@@ -1,7 +1,7 @@
 {
   "name": "template-be-node",
   "description": "Template for a Node.js backend in Typescript",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "main": "index.js",
   "type": "module",
   "scripts": {
