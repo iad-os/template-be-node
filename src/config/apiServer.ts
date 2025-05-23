@@ -69,9 +69,9 @@ const app: FastifyPluginAsync<MPlugins> = async (
   // Normally you would need to load by hand each plugin. `fastify-autoload` is an utility
   // we wrote to solve this specific problems. It loads all the content from the specified
   // folder, even the subfolders. Take at look at its documentation, as it's doing a lot more!
-  await void fastify.register(introspect, opts.introspector);
-  await void fastify.register(authorization, opts.authorization);
-  await void fastify.register(fetchInjection, opts.fetchInjection);
+  await fastify.register(introspect, opts.introspector);
+  await fastify.register(authorization, opts.authorization);
+  await fastify.register(fetchInjection, opts.fetchInjection);
 
   // Then, we'll load all of our routes.
   await fastify.register(AutoLoad, {
