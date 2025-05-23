@@ -3,7 +3,7 @@ import { MPlugins } from '../types/fastify.js';
 
 export const autoPrefix = '/template';
 
-const Embeddings: FastifyPluginAsync<MPlugins['main']> = async fastify => {
+const Template: FastifyPluginAsync<MPlugins['main']> = async fastify => {
   // const { authorize, fetchInjection } = fastify;
 
   // fastify.addHook('onRequest', fetchInjection); // use this to inject fetch
@@ -14,4 +14,4 @@ const Embeddings: FastifyPluginAsync<MPlugins['main']> = async fastify => {
   });
 };
 
-export default Embeddings;
+export default Template;
