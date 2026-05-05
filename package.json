@@ -10,6 +10,9 @@
     "start": "tsx --loader ./src/index.ts",
     "lint": "oxlint --config .oxlintrc.json src/",
     "push": "git push origin HEAD && git push origin $(git describe --tags `git rev-list --tags --max-count=1`)",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "ver": "npm run build && npm version ${npm_config_newversion} --tag-version-prefix=\"\" --preid=${npm_config_preid} --template=\"{{version}}-{{preid}}\""
   },
   "keywords": [],
@@ -23,10 +26,12 @@
     "@types/node": "^24.0.0",
     "@types/qs": "^6.9.18",
     "@types/wait-on": "^5.3.4",
+    "@vitest/coverage-v8": "^4.1.5",
     "oxlint": "^1.16.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.3",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.5"
   },
   "dependencies": {
     "@fastify/autoload": "^6.3.0",
