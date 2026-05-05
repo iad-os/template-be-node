@@ -1,5 +1,5 @@
-import { Static, Type } from '@sinclair/typebox';
-import { AuthConfig, GhiiOptions } from '../config/options.js';
+import { z } from 'zod';
+import { GhiiOptions, AuthConfig } from '../config/options.js';
 import {
   IntrospectLikeToken,
   createAuthorize,
@@ -33,9 +33,7 @@ export type MPlugins = {
   fetchInjection: FetchInjectionOpts;
 };
 
-export const Header = Type.Object({
-  authorization: Type.String({
-    description: 'Authorization bearer',
-  }),
+export const HeaderSchema = z.object({
+  authorization: z.string().describe('Authorization bearer'),
 });
-export type Header = Static<typeof Header>;
+export type Header = z.infer<typeof HeaderSchema>;

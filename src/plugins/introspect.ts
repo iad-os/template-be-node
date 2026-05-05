@@ -1,45 +1,38 @@
-import { Static, Type } from '@sinclair/typebox';
-import { Value } from '@sinclair/typebox/value';
 import { FastifyBaseLogger } from 'fastify';
 import fp from 'fastify-plugin';
 import { LRUCache } from 'lru-cache';
 import qs from 'qs';
-import { AuthConfig, CacheConfig } from '../config/options.js';
+import { z } from 'zod';
+import { AuthConfig } from '../config/options.js';
 import { getWellknown, getWellknownKeyValue } from '../utils/idp.js';
-import { IntrospectLikeToken, IntrospectTokenError } from './authorization.js';
+import {
+  IntrospectLikeToken,
+  IntrospectLikeTokenSchema,
+  IntrospectTokenError,
+  IntrospectTokenErrorSchema,
+} from './authorization.js';
 
-export const TokenIntrospectorConfig = Type.Composite([
-  Type.Pick(AuthConfig, ['issuers']),
-  Type.Object({
-    cache: Type.Union([Type.Literal(false), CacheConfig]),
-  }),
-]);
+const CacheConfigSchema = z.object({
+  size: z.number().min(1).max(10000).default(1000),
+  introspectTTL: z.number().min(1).default(1),
+});
 
-export type TokenIntrospectorConfig = Static<typeof TokenIntrospectorConfig>;
+export const TokenIntrospectorConfigSchema = z.object({
+  issuers: z.record(z.string(), z.any()),
+  cache: z.union([z.literal(false), CacheConfigSchema]),
+});
 
-/**
- * This plugins adds some utilities to handle http errors
- *
- * @see https://github.com/fastify/fastify-sensible
- */
+export type TokenIntrospectorConfig = z.infer<
+  typeof TokenIntrospectorConfigSchema
+>;
+
 export default fp<TokenIntrospectorConfig>(async (fastify, ops) => {
-  const configCheck = Value.Check(TokenIntrospectorConfig, ops);
-  if (!configCheck) {
-    throw new Error(
-      `Invalid configuration: ${Array.from(
-        Value.Errors(TokenIntrospectorConfig, ops)
-      ).reduce((acc, e) => {
-        return (acc += `${e.message} for path: ${e.path} `);
-      }, '')}`
-    );
-  }
-  // Most importantly, use declaration merging to add the custom property to the Fastify type system
-
   await fastify.decorate(
     'introspect',
     createTokenIntrospector({ config: ops, logger: fastify.log })
   );
 });
+
 export function createTokenIntrospector({
   config,
   logger,
@@ -47,6 +40,8 @@ export function createTokenIntrospector({
   config: TokenIntrospectorConfig;
   logger: FastifyBaseLogger;
 }) {
+  const issuers = config.issuers as AuthConfig['issuers'];
+
   const introspectionCache = cache<IntrospectLikeToken | IntrospectTokenError>(
     config.cache ? true : false,
     !config.cache
@@ -66,8 +61,7 @@ export function createTokenIntrospector({
     if (cachedIntrospection) return cachedIntrospection;
 
     const { iss } = tokenPayload;
-
-    const issuerConfig = config.issuers[iss];
+    const issuerConfig = issuers[iss];
 
     if (!issuerConfig) {
       return {
@@ -81,7 +75,7 @@ export function createTokenIntrospector({
 
     const wellknown = await getWellknown(issuerConfig.wellKnown);
 
-    let introspectHeaders: HeadersInit = {
+    const introspectHeaders: HeadersInit = {
       ...headers,
       'Content-Type': 'application/x-www-form-urlencoded',
       authorization: toBasic(
@@ -116,14 +110,11 @@ export function createTokenIntrospector({
         );
 
         if (isInactiveToken(payload)) {
-          const errorResponse = {
+          const errorResponse: IntrospectTokenError = {
             active: false,
-            error: {
-              code: 401,
-              msg: 'Token not active',
-            },
+            error: { code: 401, msg: 'Token not active' },
           };
-          introspectionCache.add(token, { ...errorResponse, cached: true });
+          introspectionCache.add(token, { ...errorResponse, cached: true } as IntrospectLikeToken);
           return errorResponse;
         }
 
@@ -133,18 +124,18 @@ export function createTokenIntrospector({
             audience: payload.aud,
           }) === false
         ) {
-          const errorResponse = {
+          const errorResponse: IntrospectTokenError = {
             active: false,
-            error: {
-              code: 403,
-              msg: 'Audience check failed',
-            },
+            error: { code: 403, msg: 'Audience check failed' },
           };
-          introspectionCache.add(token, { ...errorResponse, cached: true });
+          introspectionCache.add(token, { ...errorResponse, cached: true } as IntrospectLikeToken);
           return errorResponse;
         }
 
-        introspectionCache.add(token, { ...payload, cached: true });
+        const parsed = IntrospectLikeTokenSchema.safeParse(payload);
+        if (parsed.success) {
+          introspectionCache.add(token, { ...parsed.data, cached: true });
+        }
         return payload;
       }
 
@@ -181,34 +172,22 @@ function cache<V extends object>(
   enabled: boolean,
   options?: LRUCache.Options<string, V, null>
 ) {
-  const cache = new LRUCache<string, V, null>(
-    options ?? {
-      max: 1000,
-      ttl: 10,
-    }
+  const lru = new LRUCache<string, V, null>(
+    options ?? { max: 1000, ttl: 10 }
   );
   let status = enabled;
-  const add: (key: string, value: V) => void = function (key, value) {
-    if (status) cache.set(key, value);
+  const add = (key: string, value: V) => {
+    if (status) lru.set(key, value);
   };
-
-  const find: (key: string) => V | undefined = function (key) {
-    if (status) {
-      return cache.get(key);
-    }
-    return;
+  const find = (key: string): V | undefined => {
+    if (status) return lru.get(key);
+    return undefined;
   };
-  const active: (setTo?: boolean) => boolean = function (setTo) {
-    if (setTo) {
-      status = setTo;
-    }
+  const active = (setTo?: boolean): boolean => {
+    if (setTo !== undefined) status = setTo;
     return status;
   };
-  return {
-    add,
-    find,
-    active,
-  };
+  return { add, find, active };
 }
 
 function toBasic(username: string, password: string) {
@@ -221,12 +200,8 @@ export function audienceVerifier(audOpts: {
   audience: string | string[];
 }): boolean {
   const { audience_check, audience = [] } = audOpts;
-  if (audience_check === false) {
-    return true;
-  }
-  if (typeof audience === 'string') {
-    return audience === audience_check;
-  }
+  if (audience_check === false) return true;
+  if (typeof audience === 'string') return audience === audience_check;
   return audience.includes(audience_check);
 }
 
@@ -234,14 +209,12 @@ function isError(error: unknown): error is { message: string } {
   return Object.prototype.hasOwnProperty.call(error, 'message');
 }
 
-//type guard inactive token
 export function isInactiveToken(
   payload: unknown
 ): payload is IntrospectTokenError {
-  return (
+  return IntrospectTokenErrorSchema.safeParse(payload).success &&
     typeof payload === 'object' &&
     payload !== null &&
     'active' in payload &&
-    payload.active === false
-  );
+    payload.active === false;
 }

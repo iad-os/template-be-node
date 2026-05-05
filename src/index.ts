@@ -8,9 +8,9 @@ const logger = log({
 
 (async () => {
   try {
-    await options.waitForFirstSnapshot({
+    await options.waitForSnapshot({
       timeout: 10000,
-      onFirstSnapshot: async firstSnapshot => {
+      onValidSnapshot: async firstSnapshot => {
         if (process.env.NODE_ENV === 'development') {
           logger.debug(
             { options: firstSnapshot },

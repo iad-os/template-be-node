@@ -1,6 +1,8 @@
-import { Value } from '@sinclair/typebox/value';
 import { FastifyBaseLogger } from 'fastify';
-import { IntrospectLikeToken } from '../plugins/authorization.js';
+import {
+  IntrospectLikeToken,
+  IntrospectLikeTokenSchema,
+} from '../plugins/authorization.js';
 
 export function extractToken(token: string): string {
   const [, payload] = token.split('.');
@@ -18,7 +20,10 @@ export function verifyToken(
   try {
     const payloadEncoded = extractToken(token);
     const payloadStringify = decodeToken(payloadEncoded);
-    return Value.Cast(IntrospectLikeToken, JSON.parse(payloadStringify));
+    const parsed = IntrospectLikeTokenSchema.safeParse(
+      JSON.parse(payloadStringify)
+    );
+    return parsed.success ? parsed.data : undefined;
   } catch (error) {
     logger
       ? logger.warn(error, 'Invalid token format')

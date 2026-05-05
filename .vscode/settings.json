@@ -2,21 +2,18 @@
 {
     "window.title": "template-be-node${separator}${dirty}${activeEditorShort}${separator}${appName}",
     "editor.codeActionsOnSave": {
-      "source.fixAll.eslint": "explicit"
+      "source.fixAll.oxlint": "explicit"
     },
-    "eslint.validate": [
-      "javascript",
-      "typescript"
-    ],
+    "oxc.configPath": ".oxlintrc.json",
     "editor.formatOnSave": false,
     "[javascript]": {
-      "editor.formatOnSave": true
+      "editor.formatOnSave": false
     },
     "[typescript]": {
-      "editor.formatOnSave": true
+      "editor.formatOnSave": false
     },
     "[markdown]": {
-      "editor.formatOnSave": true
+      "editor.formatOnSave": false
     },
     "search.exclude": {
       "**/node_modules": true,
@@ -30,6 +27,7 @@
     ],
     "appService.deploySubpath": "",
     "files.eol": "\n",
+    "peacock.remoteColor": "#c4e04a",
     "workbench.colorCustomizations": {
       "activityBar.activeBackground": "#d2e776",
       "activityBar.background": "#d2e776",
@@ -49,5 +47,4 @@
       "titleBar.inactiveBackground": "#c4e04a99",
       "titleBar.inactiveForeground": "#15202b99"
     },
-    "peacock.remoteColor": "#c4e04a",
   }

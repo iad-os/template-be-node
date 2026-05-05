@@ -2,9 +2,11 @@ import QueryString from 'qs';
 import waitOn from 'wait-on';
 import log from '../config/log.js';
 import { IssuerConfig } from '../config/options.js';
-import { Value } from '@sinclair/typebox/value';
 import { FastifyBaseLogger } from 'fastify';
-import { IntrospectLikeToken } from '../plugins/authorization.js';
+import {
+  IntrospectLikeToken,
+  IntrospectLikeTokenSchema,
+} from '../plugins/authorization.js';
 
 function extractToken(token: string): string {
   const [, payload] = token.split('.');
@@ -36,14 +38,13 @@ export async function credentialsVerifier(config: IssuerConfig) {
   }
 }
 
-export function getWellknownKeyValue(wellKnown: any, key: string) {
-  return wellKnown[key];
+export function getWellknownKeyValue(wellKnown: Record<string, unknown>, key: string) {
+  return wellKnown[key] as string;
 }
 
-export async function getWellknown(url: string) {
+export async function getWellknown(url: string): Promise<Record<string, unknown>> {
   const response = await fetch(url);
-  const wellknown = await response.json();
-  return wellknown;
+  return response.json();
 }
 
 export function checkConnectivity(issuer: string, waitOnTimeout: number) {
@@ -63,7 +64,11 @@ export function verifyToken(
   try {
     const payloadEncoded = extractToken(token);
     const payloadStringify = decodeToken(payloadEncoded);
-    return Value.Cast(IntrospectLikeToken, JSON.parse(payloadStringify));
+    const parsed = IntrospectLikeTokenSchema.safeParse(
+      JSON.parse(payloadStringify)
+    );
+    if (!parsed.success) throw new Error('Invalid token payload');
+    return parsed.data;
   } catch (error) {
     logger
       ? logger.warn(error, 'Invalid token format')

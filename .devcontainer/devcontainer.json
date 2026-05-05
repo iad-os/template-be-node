@@ -3,11 +3,10 @@
 {
 	"name": "template BE Node",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bullseye",
+	"image": "mcr.microsoft.com/devcontainers/typescript-node:dev-24-bookworm",
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"esbenp.prettier-vscode",
 				"ms-azuretools.vscode-docker",
 				"humao.rest-client",
 				"eamodio.gitlens",

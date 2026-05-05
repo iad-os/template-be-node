@@ -1,5 +1,5 @@
 # Install production dependencies
-FROM node:22 as depsStage
+FROM node:24 as depsStage
 ARG NODE_ARG_TAG_VERSION
 ENV NODE_APP_TAG_VERSION=${NODE_ARG_TAG_VERSION}
 WORKDIR /app
@@ -7,7 +7,7 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 # Install build dependencies
-FROM node:22 as buildDepsStage
+FROM node:24 as buildDepsStage
 ARG NODE_ARG_TAG_VERSION
 ENV NODE_APP_TAG_VERSION=${NODE_ARG_TAG_VERSION}
 WORKDIR /app
@@ -15,7 +15,7 @@ COPY package*.json ./
 RUN npm ci
 
 # Run tests & build
-FROM node:22 as buildStage
+FROM node:24 as buildStage
 ARG NODE_ARG_TAG_VERSION
 ENV NODE_APP_TAG_VERSION=${NODE_ARG_TAG_VERSION}
 WORKDIR /app
@@ -27,7 +27,7 @@ RUN npm run build
 
 
 # Stage: image create final image
-FROM node:22-alpine
+FROM node:24-alpine
 # Create app directory
 ARG NODE_ARG_TAG_VERSION
 ENV NODE_APP_TAG_VERSION=${NODE_ARG_TAG_VERSION}
