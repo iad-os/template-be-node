@@ -2,3 +2,22 @@ node_modules
 dist
 .env
 .template-be-noderc.yml
+
+# Coverage
+coverage
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+*.log
+logs
