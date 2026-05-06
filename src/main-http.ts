@@ -4,6 +4,7 @@ import { GhiiOptions } from './config/options.js';
 import irene from './config/Irene.js';
 import { nanoid } from 'nanoid';
 import { optionsLog } from './config/log.js';
+import { errorHandler } from './errors/handler/errorHandler.js';
 
 const HTTP_PORT = process.env.PORT ?? 3000;
 const HTTP_HOST = process.env.HOST_BINDING
@@ -35,6 +36,7 @@ async function start(opts: GhiiOptions) {
     });
 
     server.log.info(`server listening on ${addr}`);
+    server.setErrorHandler(errorHandler);
   } catch (err) {
     server.log.error(err);
     irene.kill(err);
